@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title> CountDown Timer</title>
+  <meta name="description"
+    content="Simple online clock that can work as a stopwatch or countdown timer with start, pause and reset functions.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .main_div {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: "Roboto";
+      font-weight: bold;
+      background-color: #edf6fc;
+      color: #1e53a2;
+    }
+
+    .item {
+      width: 84%;
+      background-color: #ecfce4;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: rgb(18, 18, 148);
+      font-size: 17vh;
+    }
+
+    .flex-2 {
+      height: 10%;
+      margin: 20px;
+      align-items: center;
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 0%;
+      font-size: 3vh;
+      background-color: #ffffff00;
+      /* background-color: #f08bc3; */
+    }
+
+    .flex-3 {
+
+      margin: 20px;
+      align-items: center;
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 0%;
+      font-size: 3vh;
+      background-color: #ffffff86;
+      /* background-color: #f08bc3; */
+    }
+
+    #clock {
+      user-select: none;
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+
+    .alert {
+      color: #c72b2b;
+    }
+
+    @media (min-aspect-ratio: 1/1) {
+      body {
+        font-size: 50vh;
+      }
+    }
+
+    @media (max-aspect-ratio: 1/1) {
+      body {
+        font-size: 30vw;
+      }
+    }
+  </style>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+</head>
+
+<body class="main_div">
+
+  <div class="item flex-3">
+    This is a countdown timer
+  </div>
+  <div class="item">
+
+    <div id="clock">
+      <span id="minutes"></span>:<span id="seconds"></span>
+    </div>
+
+  </div>
+
+  <div class="item flex-3">
+    <tbody>
+      <tr>
+        <td>
+          <input type="text" class="form-control" value="0" id="st_minute" kl_vkbd_parsed="true"> minute</td>
+        <td>
+          <input type="text" class="form-control" value="0" id="st_second" kl_vkbd_parsed="true"> second</td>
+        <td>
+          <!-- <input type="text" class="form-control" value="" id="s_second" 
+            kl_vkbd_parsed="true"> second</td> -->
+      </tr>
+    </tbody>
+
+  </div>
+  <!-- <div class="item flex-2"> <p> <button class="btn btn-info btn-lg" id="btn_set_time" >Set time </button></span></p></div> -->
+  <button type="input" class="btn btn-primary btn-lg" id="startFn" data-toggle="button" aria-pressed="false"
+    autocomplete="off" onclick="">
+    Start / Pause
+  </button>
+
+  <div class="item flex-2">
+
+    <span>
+      <div class="item flex-2"><button class="btn btn-info btn-lg" id="btn_set_time">Set time </button>
+    </span>
+    <button type="reset" id="btn_reset" class="btn btn-warning btn-lg">Reset </button></span>
+  </div>
+  </div>
+
+</body>
+
+
+<script src="https://npmcdn.com/@reactivex/rxjs@5.0.0-beta.2/dist/global/Rx.umd.js"></script>
+<script>
+  // TODO
+  // - customize total and alert time (separate page)
+  // - ffw/rwd
+
+  // DOM elements
+  const clock = document.getElementById('clock');
+  const minutes = document.getElementById('minutes');
+  const seconds = document.getElementById('seconds');
+  const set_time_button = document.getElementById('btn_set_time');
+
+  // Options
+  const params = new URLSearchParams(location.search.slice(1));
+
+
+  // const click_set_time$ = Rx.Observable.fromEvent(set_time_button, 'click');
+  //click_set_time.tap(console.log(sst_minute))
+  var change_time = 15;
+
+  const totalTime = parseInt(params.get('time'), 10) || change_time * 60; // 20 minutes
+  const alertTime = parseInt(params.get('alert'), 10) || 1 * 60; // 3 minutes
+  let direction = params.get('direction') === 'up' ? 'up' : 'down';
+
+  // Helper stuff
+  const toTime = (seconds) => ({
+    seconds: Math.floor(seconds % 60),
+    minutes: Math.floor(seconds / 60),
+    hours :  Math.floor(seconds / 60 / 60),
+    alert: direction === 'up' ? seconds > totalTime - alertTime : seconds < alertTime
+  });
+  const pad = (number) => number <= 9 ? ('0' + number) : number.toString();
+
+  // Clock stuff
+  const initialValue = direction === 'up' ? 0 : totalTime;
+  const inc = (acc) => acc + 1;
+  const dec = (acc) => acc - 1;
+  const incOrDec = (acc) => (direction === 'up' ? inc : dec)(acc)
+  const reset = () => initialValue;
+  const stillCan = (seconds) => direction === 'up' ? seconds <= totalTime : seconds >= 0;
+  const render = (time) => {
+    clock.classList[time.alert ? 'add' : 'remove']('alert');
+    minutes.innerHTML = pad(time.minutes);
+    seconds.innerHTML = pad(time.seconds);
+  }
+
+  const interval$ = Rx.Observable.interval(1000);
+
+
+  // Call the button click 
+
+  const start_button = document.getElementById('startFn');
+  const click$ = Rx.Observable.fromEvent(start_button, 'click');
+
+
+  const dblclick$ = Rx.Observable.fromEvent(document, 'dblclick');
+
+  const toggleOrReset$ = Rx.Observable.merge(
+      click$.mapTo((isRunning) => !isRunning)
+    )//  Add to :   dblclick$.mapTo(() => false)
+
+
+    .startWith(false)
+    .scan((isRunning, toggleOrFalse) => toggleOrFalse(isRunning))
+    .do((isRunning) => console.log('Running:', isRunning))
+    .share();
+
+  const start$ = toggleOrReset$.filter((isRunning) => isRunning);
+  const stop$ = toggleOrReset$.filter((isRunning) => !isRunning);
+  
+  const incOrDecOrReset$ = Rx.Observable.merge(
+    interval$.takeUntil(Rx.Observable.merge(stop$)).mapTo(incOrDec)
+  );
+
+  // IF double click to pause 
+
+  // interval$.takeUntil(Rx.Observable.merge(stop$, dblclick$)).mapTo(incOrDec),
+  //   dblclick$.mapTo(reset)
+
+
+  start$
+    .switchMapTo(incOrDecOrReset$)
+    .startWith(initialValue)
+    .scan((seconds, incOrDecOrReset) => incOrDecOrReset(seconds))
+    .takeWhile(stillCan)
+    .map(toTime)
+    .subscribe(render);
+
+
+  // BCCCC
+
+  function addParameterToURL(param) {
+    url = location.href;
+    const regex = /time=\d+/;
+    //if()
+    //alert(url.search(regex))
+    if (url.search(regex) == -1) {
+      url += (url.split('?')[1] ? '&' : '?time=') + param;
+    } else {
+
+      url = url.replace(regex, 'time='+param);
+    }
+
+    //alert(params);
+    // console.log(url.replace(regex, 'ferret'));
+    // params.set('time', param);
+    // re_url = url + "?" + params.toString();
+
+
+    // console.log(_url)
+    // _url += (_url.split('?')[1] ? '&':'?time=') + param;
+    return url;
+  }
+
+
+  $('#btn_set_time').click(function () {
+
+    var sst_minute = document.getElementById("st_minute").value * 60 ;
+    var sst_second = document.getElementById("st_second").value;
+    // var ss_second = document.getElementById("s_second").value;
+    var sum_ans = parseInt(sst_minute) + parseInt(sst_second);
+
+    console.log(sum_ans);
+
+    // console.log(addParameterToURL(sum_ans));
+
+
+    window.location.href = addParameterToURL(sum_ans);
+
+  });
+
+  $('#btn_reset').click(function () {
+
+    window.location.href = "./index.html"
+
+  });
+</script>
+
+</html>
